@@ -20,8 +20,7 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
 emotion_to_query = {
     '기쁨': '기분 좋아지는 노래',
     '슬픔': '슬픈 노래 모음',
-    '분노': '화날 때 듣는 노래',
-    '힐링': '마음이 편안해지는 노래'
+    '분노': '화날 때 듣는 노래'
 }
 
 def recommend_music_by_emotion(emotion: str):
