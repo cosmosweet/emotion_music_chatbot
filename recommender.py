@@ -19,7 +19,7 @@ REDIRECT_URI = os.getenv("http://127.0.0.1:8080/callback")
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
     client_id = CLIENT_ID,
     client_secret = CLIENT_SECRET,
-    redirect_uri = REDIRECT_URI,
+    redirect_uri = REDIRECT_URI,    
     scope = 'user-read-private'
 ))
 
