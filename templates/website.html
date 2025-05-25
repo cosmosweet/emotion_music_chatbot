@@ -95,27 +95,64 @@
   </div>
 
   <script>
-    async function sendMessage() {
-      const input = document.getElementById("message");
-      const chatbox = document.getElementById("chatbox");
-      const userMessage = input.value.trim();
+  async function sendMessage() {
+    const input = document.getElementById("message");
+    const chatbox = document.getElementById("chatbox");
+    const userMessage = input.value.trim();
 
-      if (!userMessage) return;
+    if (!userMessage) return;
 
-      const userBubble = `
-        <div class="message user">
-          <div class="bubble">${userMessage}</div>
-        </div>`;
-      chatbox.innerHTML += userBubble;
-      input.value = "";
+    // 사용자 메시지 출력
+    const userBubble = 
+      <div class="message user">
+        <div class="bubble">${userMessage}</div>
+      </div>;
+    chatbox.innerHTML += userBubble;
+    input.value = "";
+    chatbox.scrollTop = chatbox.scrollHeight;
+
+    // Flask 서버로 메시지 전송
+    try {
+      const response = await fetch("/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: userMessage }),
+      });
+
+      const data = await response.json();
+
+      // GPT 응답 출력
+      const botReply = 
+        <div class="message bot">
+          <div class="bubble"> ${data.reply}</div>
+        </div>;
+      chatbox.innerHTML += botReply;
+
+      // 감정 분석 및 음악 추천 출력
+      const musicReply = 
+        <div class="message bot">
+          <div class="bubble">🎵 ${data.song.content}</div>
+        </div>;
+      chatbox.innerHTML += musicReply;
+
       chatbox.scrollTop = chatbox.scrollHeight;
-    }
 
-    function handleKey(event) {
-      if (event.key === "Enter") {
-        sendMessage();
-      }
+    } catch (error) {
+      chatbox.innerHTML += 
+        <div class="message bot">
+          <div class="bubble">서버 오류: ${error}</div>
+        </div>;
     }
-  </script>
+  }
+
+  function handleKey(event) {
+    if (event.key === "Enter") {
+      sendMessage();
+    }
+  }
+</script>
+
 </body>
 </html>
