@@ -94,7 +94,7 @@
     <button id="sendBtn" onclick="sendMessage()">보내기</button>
   </div>
 
-  <script>
+<script>
   async function sendMessage() {
     const input = document.getElementById("message");
     const chatbox = document.getElementById("chatbox");
@@ -103,10 +103,10 @@
     if (!userMessage) return;
 
     // 사용자 메시지 출력
-    const userBubble = 
+    const userBubble = `
       <div class="message user">
         <div class="bubble">${userMessage}</div>
-      </div>;
+      </div>`;
     chatbox.innerHTML += userBubble;
     input.value = "";
     chatbox.scrollTop = chatbox.scrollHeight;
@@ -115,35 +115,35 @@
     try {
       const response = await fetch("/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message: userMessage }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMessage })
       });
 
       const data = await response.json();
 
       // GPT 응답 출력
-      const botReply = 
+      const botReply = `
         <div class="message bot">
-          <div class="bubble"> ${data.reply}</div>
-        </div>;
+          <div class="bubble">${data.reply}</div>
+        </div>`;
       chatbox.innerHTML += botReply;
 
-      // 감정 분석 및 음악 추천 출력
-      const musicReply = 
-        <div class="message bot">
-          <div class="bubble">🎵 ${data.song.content}</div>
-        </div>;
-      chatbox.innerHTML += musicReply;
+      // 노래 추천이 있을 때만 출력
+      if (data.song) {
+        const musicReply = `
+          <div class="message bot">
+            <div class="bubble">🎵 ${data.song.content}</div>
+          </div>`;
+        chatbox.innerHTML += musicReply;
+      }
 
       chatbox.scrollTop = chatbox.scrollHeight;
 
     } catch (error) {
-      chatbox.innerHTML += 
+      chatbox.innerHTML += `
         <div class="message bot">
           <div class="bubble">서버 오류: ${error}</div>
-        </div>;
+        </div>`;
     }
   }
 
