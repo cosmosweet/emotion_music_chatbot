@@ -1,29 +1,32 @@
 from openai import OpenAI
 
-# 사용자에게 API 키 입력받기
-api_key = input("🔑 OpenAI API 키를 입력하세요: ").strip()
+#키 설정
+def init_chat_key(api_key: str) -> OpenAI:
+    return OpenAI(api_key=api_key)
 
-# OpenAI 클라이언트 초기화
-client = OpenAI(api_key=api_key)
+# 메시지 리스트 초기화
+def init_chat_context(system_prompt: str = "You are a helpful assistant.") -> list:
+    return [{"role": "system", "content": system_prompt}]
 
-# 대화 메시지 초기화
-messages = [{"role": "system", "content": "You are a helpful assistant."}]
-
-print("🧠 GPT 챗봇 시작 (종료하려면 'exit' 입력)")
-
-while True:
-    user_input = input("나: ")
-    if user_input.lower() == "exit":
-        break
-
+# 메시지 히스토리 업데이트 및 GPT 응답 반환
+def get_chat_reply(client: OpenAI, messages: list, user_input: str, model: str = "gpt-3.5-turbo") -> str:
     messages.append({"role": "user", "content": user_input})
 
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model=model,
         messages=messages
     )
 
     reply = response.choices[0].message.content
     messages.append({"role": "assistant", "content": reply})
+    return reply
 
-    print("GPT:", reply)
+#from chatbot_gpt import init_openai_client, init_chat_context, get_gpt_reply
+
+#client = init_openai_client("your-api-key")
+#messages = init_chat_context()
+
+#text = "오늘 날씨 어때?"
+#response = get_gpt_reply(client, messages, text)
+
+#print("GPT 응답:", response)
