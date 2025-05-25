@@ -16,12 +16,14 @@ labels = json.loads(requests.get(
 ).text)
 
 # 감정 예측 함수
-def predict_emotion(text: str) -> str:
+def predict_emotion_with_probs(text: str):
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=128).to(device)
     with torch.no_grad():
         logits = model(**inputs).logits
-        pred = torch.argmax(logits, dim=1).item()
-    return labels[pred]
+        probs = torch.softmax(logits, dim=1).cpu().numpy().flatten()
+        pred_idx = int(torch.argmax(logits, dim=1))
+        pred_emotion = labels[pred_idx]
+    return pred_emotion, probs  # 감정, 확률분포 리턴
 
 # main.py 안에서 사용 예시
 # from emotion_predictor import predict_emotion
