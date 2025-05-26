@@ -1,0 +1,11 @@
+# 환경변수
+.env
+
+# 가상환경
+venv/
+
+# 파이썬 캐시
+__pycache__/
+
+# macOS
+.DS_Store
