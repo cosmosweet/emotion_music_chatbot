@@ -1,6 +1,5 @@
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
-from dotenv import load_dotenv
+from spotipy.oauth2 import SpotifyClientCredentials
 import os
 import random
 
@@ -9,18 +8,14 @@ import random
 
 # CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
 # CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
-# REDIRECT_URI = os.getenv("SPOTIPY_REDIRECT_URI")
 
 # 프로젝트 발표용 API
-CLIENT_ID = os.getenv("e0b9304753a04c0c90c887066cd702ce")
-CLIENT_SECRET = os.getenv("79e2ff5799794bc0bd672ae97388aaaa")
-REDIRECT_URI = os.getenv("http://127.0.0.1:8080/callback")
+CLIENT_ID='e0b9304753a04c0c90c887066cd702ce'
+CLIENT_SECRET='79e2ff5799794bc0bd672ae97388aaaa'
 
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
-    client_id = CLIENT_ID,
-    client_secret = CLIENT_SECRET,
-    redirect_uri = REDIRECT_URI,    
-    scope = 'user-read-private'
+sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET
 ))
 
 # 감정별 검색어 리스트
@@ -104,21 +99,21 @@ def recommend_music_by_emotion(emotion: str):
 #############################################################################
 
 # 테스트: 파일을 직접 실행했을 때만 동작하게 함
-# if __name__ == "__main__":
-#     emotion = input("감정을 입력하세요 (기쁨 / 슬픔 / 분노): ").strip()
+if __name__ == "__main__":
+    emotion = input("감정을 입력하세요 (기쁨 / 슬픔 / 분노): ").strip()
 
-#     result = recommend_music_by_emotion(emotion)
+    result = recommend_music_by_emotion(emotion)
 
-#     if result:
-#         print(f"\n🎧 감정: {result['emotion']}")
-#         print(f"📚 추천 플레이리스트: {result['playlist_name']}")
-#         print(f"🔗 링크: {result['playlist_url']}\n")
+    if result:
+        print(f"\n🎧 감정: {result['emotion']}")
+        print(f"📚 추천 플레이리스트: {result['playlist_name']}")
+        print(f"🔗 링크: {result['playlist_url']}\n")
 
-#         print("🎵 추천 곡 리스트:")
-#         for song in result['songs']:
-#             print(f"- {song['name']} - {song['artist']}")
-#             print(f"  🔗 {song['url']}\n")
-#     else:
-#         print("❌ 감정에 맞는 플레이리스트를 찾지 못했습니다.")
+        print("🎵 추천 곡 리스트:")
+        for song in result['songs']:
+            print(f"- {song['name']} - {song['artist']}")
+            print(f"  🔗 {song['url']}\n")
+    else:
+        print("❌ 감정에 맞는 플레이리스트를 찾지 못했습니다.")
 
 #############################################################################
