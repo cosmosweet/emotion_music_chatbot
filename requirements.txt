@@ -1,2 +1,10 @@
+# Python 3.10.16 required
 spotipy==2.25.1
 python-dotenv==1.1.0
+torch==2.1.2
+transformers==4.31.0
+scikit-learn==1.6.1
+numpy==1.24.4
+pandas==1.5.3
+datasets==3.6.0
+peft==0.4.0
