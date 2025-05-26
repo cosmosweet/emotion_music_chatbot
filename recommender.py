@@ -99,21 +99,21 @@ def recommend_music_by_emotion(emotion: str):
 #############################################################################
 
 # 테스트: 파일을 직접 실행했을 때만 동작하게 함
-if __name__ == "__main__":
-    emotion = input("감정을 입력하세요 (기쁨 / 슬픔 / 분노): ").strip()
+# if __name__ == "__main__":
+#     emotion = input("감정을 입력하세요 (기쁨 / 슬픔 / 분노): ").strip()
 
-    result = recommend_music_by_emotion(emotion)
+#     result = recommend_music_by_emotion(emotion)
 
-    if result:
-        print(f"\n🎧 감정: {result['emotion']}")
-        print(f"📚 추천 플레이리스트: {result['playlist_name']}")
-        print(f"🔗 링크: {result['playlist_url']}\n")
+#     if result:
+#         print(f"\n🎧 감정: {result['emotion']}")
+#         print(f"📚 추천 플레이리스트: {result['playlist_name']}")
+#         print(f"🔗 링크: {result['playlist_url']}\n")
 
-        print("🎵 추천 곡 리스트:")
-        for song in result['songs']:
-            print(f"- {song['name']} - {song['artist']}")
-            print(f"  🔗 {song['url']}\n")
-    else:
-        print("❌ 감정에 맞는 플레이리스트를 찾지 못했습니다.")
+#         print("🎵 추천 곡 리스트:")
+#         for song in result['songs']:
+#             print(f"- {song['name']} - {song['artist']}")
+#             print(f"  🔗 {song['url']}\n")
+#     else:
+#         print("❌ 감정에 맞는 플레이리스트를 찾지 못했습니다.")
 
 #############################################################################
