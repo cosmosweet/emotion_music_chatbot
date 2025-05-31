@@ -1,5 +1,4 @@
 import random
-from konlpy.tag import Okt
 from sentence_transformers import SentenceTransformer, util
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -36,7 +35,7 @@ def get_best_matching_emotion_word(user_input, emotion):
 
     return candidates[best_idx]
 
-def recommend_music(user_input, emotion):
+def recommend_music_by_emotion(user_input, emotion):
     query_for_search = get_best_matching_emotion_word(user_input, emotion)
     print(f"[감정 기반 검색 쿼리] {query_for_search}")
 
