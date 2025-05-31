@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <title>emotion_music_chatbot</title>
+  <!-- Chart.js 라이브러리 (감정 히스토리 시각화를 위해 사용) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background-color: #fff;
+      background-color: #f8f9fa;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -18,16 +21,55 @@
       color: #333;
     }
 
+    /* 로그인/회원가입 카드 스타일 */
+    #loginCard, #signupCard {
+      display: none;             
+      background: none;
+      border: none;
+      padding: 0;
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 320px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    /* 입력 필드 스타일 */
+    .form-input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    .btn {
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+    .btn + .btn {
+      margin-top: 8px; /* 버튼 간 간격 */
+    }
+
     #chatbox {
       width: 100%;
       max-width: 700px;
-      height: 500px;
+      height: 400px;
       border: 1px solid #000;
       border-radius: 8px;
       background-color: #fff;
-      overflow-y: auto; 
+      overflow-y: auto;
       padding: 15px;
       margin-bottom: 10px;
+      display: none;
     }
 
     .message {
@@ -35,13 +77,8 @@
       display: flex;
     }
 
-    .user {
-      justify-content: flex-end;
-    }
-
-    .bot {
-      justify-content: flex-start;
-    }
+    .user { justify-content: flex-end; }  /* 사용자 메시지 오른쪽 정렬 */
+    .bot { justify-content: flex-start; } /* 챗봇 메시지 왼쪽 정렬 */
 
     .bubble {
       padding: 10px 15px;
@@ -49,23 +86,16 @@
       max-width: 65%;
     }
 
-    .user .bubble {
-      background-color: #dcf8c6;
-      color: #000;
-    }
-
-    .bot .bubble {
-      background-color: #e6e6e6;
-      color: #000;
-    }
+    .user .bubble { background-color: #dcf8c6; color: #000; }
+    .bot .bubble { background-color: #e6e6e6; color: #000; }
 
     #inputArea {
-      display: flex;
+      display: none;
       justify-content: center;
-      align-items: center;
       gap: 10px;
-      width: 90%;
+      width: 100%;
       max-width: 700px;
+      margin-bottom: 20px;
     }
 
     #message {
@@ -73,86 +103,224 @@
       padding: 10px;
       font-size: 16px;
       border-radius: 8px;
-      border: 1px solid #000000;
+      border: 1px solid #fff;
     }
 
     #sendBtn {
       padding: 10px 20px;
       font-size: 16px;
-      border: none;
       background-color: #4CAF50;
       color: white;
+      border: none;
       border-radius: 8px;
+    }
+
+    /* 감정 히스토리 차트 영역 */
+    #chartContainer {
+      width: 700px;
+      display: none;
     }
   </style>
 </head>
 <body>
-<h2>emotion_music_chatbot</h2>
+  <h2>emotion_music_chatbot</h2>
+
+  <!-- 로그인 이메일 + 비밀번호 입력 -->
+  <div id="loginCard">
+    <input class="form-input" id="loginEmail" placeholder="이메일">
+    <input class="form-input" id="loginPassword" type="password" placeholder="비밀번호">
+    <button class="btn" onclick="login()">로그인</button>
+    <button class="btn" style="background-color:#6c757d;" onclick="showSignup()">회원가입</button>
+  </div>
+
+  <!-- 회원가입 -->
+  <div id="signupCard">
+    <input class="form-input" id="signupEmail" placeholder="이메일">
+    <input class="form-input" id="signupPassword" type="password" placeholder="비밀번호">
+    <input class="form-input" id="signupNickname" placeholder="닉네임">
+    <button class="btn" onclick="signup()">회원가입 완료</button>
+  </div>
+
   <div id="chatbox"></div>
+
   <div id="inputArea">
     <input type="text" id="message" placeholder="메시지를 입력하세요" onkeydown="handleKey(event)">
     <button id="sendBtn" onclick="sendMessage()">보내기</button>
   </div>
 
+  <div id="chartContainer">
+    <canvas id="emotionChart"></canvas>
+  </div>
+
 <script>
+  // 페이지 로드 시 로그인 카드 표시
+  window.onload = () => {
+    showLogin();
+  };
+
+  // 로그인 카드만 보이도록 설정
+  function showLogin() {
+    document.getElementById("loginCard").style.display = "flex";
+    document.getElementById("signupCard").style.display = "none";
+  }
+
+  // 회원가입 카드만 보이도록 설정
+  function showSignup() {
+    document.getElementById("loginCard").style.display = "none";
+    document.getElementById("signupCard").style.display = "flex";
+  }
+
+  // 로그인 요청 처리
+  async function login() {
+    const email = document.getElementById("loginEmail").value;
+    const password = document.getElementById("loginPassword").value;
+
+    const res = await fetch("/login", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      initChatUI(); // 로그인 성공 -> 채팅창 전환
+    } else if (data.message.includes("등록되지")) {
+      document.getElementById("signupEmail").value = email;
+      showSignup(); // 등록되지 않은 경우 회원가입 화면으로 전환
+    } else {
+      alert(data.message); // 기타 오류 알림
+    }
+  }
+
+  // 회원가입 요청 처리
+  async function signup() {
+    const email = document.getElementById("signupEmail").value;
+    const password = document.getElementById("signupPassword").value;
+    const nickname = document.getElementById("signupNickname").value;
+
+    const res = await fetch("/signup", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ email, password, nickname })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      alert("회원가입 완료. 로그인 해주세요.");
+      showLogin(); // 회원가입 성공 -> 로그인 화면 전환
+    } else {
+      alert(data.message);
+    }
+  }
+
+  // 채팅 UI 초기화 (로그인 성공 시)
+  async function initChatUI() {
+    document.getElementById("loginCard").style.display = "none";
+    document.getElementById("signupCard").style.display = "none";
+    document.getElementById("chatbox").style.display = "block";
+    document.getElementById("inputArea").style.display = "flex";
+    document.getElementById("chartContainer").style.display = "block";
+    await loadChart(); // 감정 히스토리 차트 로딩
+  }
+
+  // 채팅 메시지 전송 처리
   async function sendMessage() {
     const input = document.getElementById("message");
     const chatbox = document.getElementById("chatbox");
     const userMessage = input.value.trim();
-
     if (!userMessage) return;
 
-    // 사용자 메시지 출력
-    const userBubble = `
-      <div class="message user">
-        <div class="bubble">${userMessage}</div>
-      </div>`;
-    chatbox.innerHTML += userBubble;
+    // 사용자 메시지 화면 출력
+    chatbox.innerHTML += `<div class="message user"><div class="bubble">${userMessage}</div></div>`;
     input.value = "";
     chatbox.scrollTop = chatbox.scrollHeight;
 
-    // Flask 서버로 메시지 전송
     try {
-      const response = await fetch("/chat", {
+      // 서버에 메시지 전송
+      const res = await fetch("/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
         body: JSON.stringify({ message: userMessage })
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
-      // GPT 응답 출력
-      const botReply = `
-        <div class="message bot">
-          <div class="bubble">${data.reply}</div>
-        </div>`;
-      chatbox.innerHTML += botReply;
+      // 챗봇 응답 출력
+      chatbox.innerHTML += `<div class="message bot"><div class="bubble">${data.reply}</div></div>`;
 
-      // 노래 추천이 있을 때만 출력
+      // 음악 추천이 있으면 함께 출력
       if (data.song) {
-        const musicReply = `
-          <div class="message bot">
-            <div class="bubble">🎵 ${data.song.content}</div>
-          </div>`;
-        chatbox.innerHTML += musicReply;
+        chatbox.innerHTML += `<div class="message bot"><div class="bubble">🎵 ${data.song.content}</div></div>`;
       }
 
       chatbox.scrollTop = chatbox.scrollHeight;
-
-    } catch (error) {
-      chatbox.innerHTML += `
-        <div class="message bot">
-          <div class="bubble">서버 오류: ${error}</div>
-        </div>`;
+      await loadChart(); // 감정 차트 갱신
+    } catch (e) {
+      chatbox.innerHTML += `<div class="message bot"><div class="bubble">서버 오류: ${e}</div></div>`;
     }
   }
 
+  // Enter 키 입력 시 메시지 전송
   function handleKey(event) {
-    if (event.key === "Enter") {
-      sendMessage();
+    if (event.key === "Enter") sendMessage();
+  }
+
+  // 감정 히스토리 차트 로드
+  async function loadChart() {
+    const res = await fetch("/emotion_history");
+    const data = await res.json();
+    if (!data.success) return;
+
+    const history = data.history;
+    const labels = Object.keys(history);
+
+    // 감정 종류 수집
+    const emotionTypes = new Set();
+    Object.values(history).forEach(day => {
+      Object.keys(day).forEach(emo => emotionTypes.add(emo));
+    });
+
+    // 감정별 데이터셋 생성
+    const datasets = [...emotionTypes].map(emotion => ({
+      label: emotion,
+      data: labels.map(date => history[date][emotion] || 0),
+      backgroundColor: getEmotionColor(emotion)
+    }));
+
+    // 감정별 색상 지정
+    function getEmotionColor(emotion) {
+      const colors = {
+        기쁨: "#1E90FF",
+        슬픔: "#9E9E9E",
+        분노: "#FF4500",
+      };
+      return colors[emotion] || "#777";
     }
+
+    // 차트 렌더링
+    const ctx = document.getElementById("emotionChart").getContext("2d");
+    if (window.myChart) window.myChart.destroy();
+    window.myChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: "top" },
+          title: { display: true, text: "최근 7일 감정별 히스토리" }
+        },
+        scales: {
+          x: { stacked: true },
+          y: { stacked: true }
+        }
+      }
+    });
   }
 </script>
-
 </body>
 </html>
