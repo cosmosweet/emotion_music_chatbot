@@ -14,4 +14,3 @@ pandas==1.5.3
 datasets==3.6.0
 peft==0.4.0
 sentence-transformers==2.2.2
-konlpy==0.6.0
