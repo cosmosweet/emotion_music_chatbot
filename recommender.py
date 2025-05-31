@@ -1,5 +1,4 @@
 import random
-from konlpy.tag import Okt
 from sentence_transformers import SentenceTransformer, util
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
