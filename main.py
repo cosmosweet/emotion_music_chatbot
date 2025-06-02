@@ -1,48 +1,33 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session
 from emotion import predict_emotion_with_probs
 from chatbot_gpt import init_chat_key, init_chat_context, get_chat_reply
 from recommender import recommend_music_by_emotion
+from db import (
+    init_db,
+    register_user,
+    login_user,
+    save_user_messages,
+    get_user_messages,
+    get_user_emotion_history,
+    save_emotion_for_user
+)
 from datetime import datetime, timedelta
 import os
 import json
 from dotenv import load_dotenv
 
-# .env 파일에서 키 로드
+init_db()
 load_dotenv()
 
-# GPT 전역 상태 초기화
 api_key = os.getenv("OPENAI_API_KEY")
 client = init_chat_key(api_key)
 messages = init_chat_context()
 
-# Flask 앱 초기화
 main = Flask(__name__)
+main.secret_key = os.getenv("FLASK_SECRET_KEY", "my_default_secret_key")
 
-# 감정 카운터 및 마지막 추천 시각
-emotion_counter = {}
-last_recommend_time = None
-current_user_email = None
-
-USER_FILE = "users.json"
-
-def load_users():
-    if not os.path.exists(USER_FILE):
-        return {}
-    with open(USER_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_users(users):
-    with open(USER_FILE, "w", encoding="utf-8") as f:
-        json.dump(users, f, indent=2, ensure_ascii=False)
-
-def save_emotion_for_user(email, emotion):
-    users = load_users()
-    today = datetime.now().strftime("%Y-%m-%d")
-    if email in users:
-        users[email].setdefault("emotions", {})
-        users[email]["emotions"].setdefault(today, {})
-        users[email]["emotions"][today][emotion] = users[email]["emotions"][today].get(emotion, 0) + 1
-        save_users(users)
+user_emotion_counter = {}
+user_last_recommend_time = {}
 
 @main.route("/")
 def index():
@@ -55,89 +40,89 @@ def signup():
     password = data.get("password")
     nickname = data.get("nickname")
 
-    users = load_users()
-    if email in users:
+    success = register_user(email, password, nickname)
+    if not success:
         return jsonify({"success": False, "message": "이미 가입된 이메일입니다."})
-
-    users[email] = {
-        "password": password,
-        "nickname": nickname,
-        "emotions": {}
-    }
-    save_users(users)
     return jsonify({"success": True})
 
 @main.route("/login", methods=["POST"])
 def login():
-    global current_user_email
     data = request.get_json()
     email = data.get("email")
     password = data.get("password")
 
-    users = load_users()
-    if email not in users:
-        return jsonify({"success": False, "message": "등록되지 않은 이메일입니다."})
-    if users[email]["password"] != password:
-        return jsonify({"success": False, "message": "비밀번호가 틀렸습니다."})
+    success, nickname = login_user(email, password)
+    if not success:
+        return jsonify({"success": False, "message": "이메일 또는 비밀번호가 틀렸습니다."})
 
-    current_user_email = email
-    return jsonify({"success": True, "nickname": users[email]["nickname"]})
+    session["user_id"] = email
+    session["nickname"] = nickname
+    messages = get_user_messages(email)
+
+    return jsonify({
+        "success": True,
+        "nickname": nickname,
+        "messages": messages
+    })
 
 @main.route("/emotion_history", methods=["GET"])
 def emotion_history():
-    if not current_user_email:
+    user_id = session.get("user_id")
+    if not user_id:
         return jsonify({"success": False, "message": "로그인이 필요합니다."})
 
-    users = load_users()
-    emotions = users.get(current_user_email, {}).get("emotions", {})
-
+    emotion_data = get_user_emotion_history(user_id)
     today = datetime.now().date()
     past_7_days = [(today - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(6, -1, -1)]
-    filtered = {day: emotions.get(day, {}) for day in past_7_days}
+    filtered = {day: emotion_data.get(day, {}) for day in past_7_days}
 
     return jsonify({"success": True, "history": filtered})
 
 @main.route("/chat", methods=["POST"])
 def chat():
-    global emotion_counter, last_recommend_time, messages
     try:
-        user_input = request.json["message"]
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"success": False, "message": "로그인이 필요합니다."})
 
-        # 감정 분석
+        user_input = request.json.get("message", "").strip()
+        if not user_input:
+            return jsonify({"success": False, "message": "메시지가 비어 있습니다."})
+
         emotion, probs = predict_emotion_with_probs(user_input)
         confidence = max(probs)
 
-        # 감정 누적 저장
         if confidence >= 0.6:
-            emotion_counter[emotion] = emotion_counter.get(emotion, 0) + 1
-            if current_user_email:
-                save_emotion_for_user(current_user_email, emotion)
+            save_emotion_for_user(user_id, emotion)
+            user_emotion_counter.setdefault(user_id, {})
+            user_emotion_counter[user_id][emotion] = user_emotion_counter[user_id].get(emotion, 0) + 1
 
-        # 음악 추천 조건 확인
         now = datetime.now()
-        cooldown_passed = (
-            last_recommend_time is None or
-            (now - last_recommend_time) >= timedelta(minutes=10)
-        )
+        last_time = user_last_recommend_time.get(user_id)
+        cooldown_passed = not last_time or (now - last_time >= timedelta(minutes=10))
         recommend = False
-        if emotion_counter.get(emotion, 0) >= 2 and cooldown_passed:
+
+        if user_emotion_counter.get(user_id, {}).get(emotion, 0) >= 2 and cooldown_passed:
             recommend = True
-            last_recommend_time = now
-            emotion_counter[emotion] = 0
+            user_last_recommend_time[user_id] = now
+            user_emotion_counter[user_id][emotion] = 0
 
-        # GPT 응답 생성
+        messages = get_user_messages(user_id)
+        if not messages:
+            messages = [{"role": "system", "content": "You are a helpful assistant."}]
+        messages.append({"role": "user", "content": user_input})
+
         reply = get_chat_reply(client, messages, user_input)
-        if recommend:
-            reply += f"\n\n지금 감정이 {emotion}인 것 같은데, 괜찮은 노래 하나 추천해드릴게요"
+        messages.append({"role": "assistant", "content": reply})
 
-        if len(messages) > 20:
-            messages = messages[:1] + messages[-19:]
+        save_user_messages(user_id, messages)
 
         song = None
         if recommend:
+            reply += f"\n\n지금 감정이 '{emotion}'인 것 같아요. 노래 하나 추천해드릴게요!"
             song_data = recommend_music_by_emotion(user_input, emotion)
-            if song_data:
-                first_song = song_data['songs'][0]
+            if song_data and song_data.get("songs"):
+                first_song = song_data["songs"][0]
                 song = {
                     "recommended": True,
                     "content": f"{first_song['name']} - {first_song['artist']}\n🔗 {first_song['url']}"
@@ -145,25 +130,29 @@ def chat():
             else:
                 song = {
                     "recommended": True,
-                    "content": "추천 결과를 가져오지 못했습니다."
+                    "content": "죄송해요, 노래 추천을 가져오지 못했어요."
                 }
 
         response = {
+            "success": True,
             "emotion": emotion,
             "reply": reply
         }
         if song:
             response["song"] = song
-
         return jsonify(response)
 
     except Exception as e:
-        return jsonify({"reply": f"서버 오류: {str(e)}"})
+        return jsonify({"success": False, "reply": f"서버 오류: {str(e)}"})
 
-# 새로 추가된 감정 시각화 페이지
 @main.route("/visualization")
 def visualization():
     return render_template("visualization.html")
 
+@main.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return jsonify({"success": True})
+
 if __name__ == "__main__":
-    main.run(host="0.0.0.0", port=5000, debug=True)
+    main.run(host="0.0.0.0", port=5001, debug=True)
