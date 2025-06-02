@@ -1,6 +1,6 @@
 import random
-from sentence_transformers import SentenceTransformer, util
 import spotipy
+from sentence_transformers import SentenceTransformer, util
 from spotipy.oauth2 import SpotifyClientCredentials
 
 # Spotify 인증
@@ -19,7 +19,7 @@ emotion_to_situation = {
     '분노': ['분노', '짜증', '폭발', '스트레스', '싸움', '격렬', '부셔', '빡칠때']
 }
 
-# Sentence-BERT 모델 로드 (최초 1회)
+# Sentence-BERT 모델 로드 (최초 1회만)
 model = SentenceTransformer('jhgan/ko-sroberta-multitask')
 
 def get_best_matching_emotion_word(user_input, emotion):
