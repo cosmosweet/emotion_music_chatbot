@@ -13,20 +13,16 @@
       margin: 0;
       padding: 20px;
     }
-
     h2 {
       color: #333;
       margin-bottom: 10px;
     }
-
-    /* 우측 상단 버튼 */
     #topRightButton {
       position: absolute;
       top: 20px;
       right: 20px;
       display: none;
     }
-
     .btn-small {
       padding: 8px 12px;
       font-size: 14px;
@@ -35,8 +31,8 @@
       border: none;
       border-radius: 6px;
       cursor: pointer;
+      margin-left: 8px;
     }
-
     #loginCard, #signupCard {
       display: none;
       background: none;
@@ -50,7 +46,6 @@
       align-items: center;
       gap: 10px;
     }
-
     .form-input {
       width: 100%;
       padding: 10px;
@@ -59,7 +54,6 @@
       font-size: 14px;
       box-sizing: border-box;
     }
-
     .btn {
       width: 100%;
       padding: 10px;
@@ -71,11 +65,9 @@
       cursor: pointer;
       box-sizing: border-box;
     }
-
     .btn + .btn {
       margin-top: 8px;
     }
-
     #chatbox {
       width: 100%;
       max-width: 700px;
@@ -88,24 +80,19 @@
       margin-bottom: 10px;
       display: none;
     }
-
     .message {
       margin: 10px 0;
       display: flex;
     }
-
     .user { justify-content: flex-end; }
     .bot { justify-content: flex-start; }
-
     .bubble {
       padding: 10px 15px;
       border-radius: 20px;
       max-width: 65%;
     }
-
     .user .bubble { background-color: #dcf8c6; color: #000; }
     .bot .bubble { background-color: #e6e6e6; color: #000; }
-
     #inputArea {
       display: none;
       justify-content: center;
@@ -114,7 +101,6 @@
       max-width: 700px;
       margin-bottom: 20px;
     }
-
     #message {
       flex: 1;
       padding: 10px;
@@ -122,7 +108,6 @@
       border-radius: 8px;
       border: 1px solid #fff;
     }
-
     #sendBtn {
       padding: 10px 20px;
       font-size: 16px;
@@ -136,12 +121,11 @@
 <body>
   <h2>emotion_music_chatbot</h2>
 
-  <!-- 우측 상단 시각화 버튼 -->
   <div id="topRightButton">
     <button class="btn-small" onclick="goToVisualization()">감정 기록 보기</button>
+    <button class="btn-small" onclick="logout()">로그아웃</button>
   </div>
 
-  <!-- 로그인 -->
   <div id="loginCard">
     <input class="form-input" id="loginEmail" placeholder="이메일">
     <input class="form-input" id="loginPassword" type="password" placeholder="비밀번호">
@@ -149,7 +133,6 @@
     <button class="btn" style="background-color:#6c757d;" onclick="showSignup()">회원가입</button>
   </div>
 
-  <!-- 회원가입 -->
   <div id="signupCard">
     <input class="form-input" id="signupEmail" placeholder="이메일">
     <input class="form-input" id="signupPassword" type="password" placeholder="비밀번호">
@@ -165,13 +148,35 @@
   </div>
 
   <script>
-    window.onload = () => {
-      showLogin();
+    // 메시지 저장 및 불러오기
+    function saveMessagesToSession(messages) {
+      sessionStorage.setItem("chat_messages", JSON.stringify(messages));
+    }
+    function loadMessagesFromSession() {
+      const saved = sessionStorage.getItem("chat_messages");
+      return saved ? JSON.parse(saved) : [];
+    }
+
+    window.onload = async () => {
+      try {
+        const res = await fetch("/emotion_history");
+        const data = await res.json();
+        if (data.success) {
+          initChatUI();
+        } else {
+          showLogin();
+        }
+      } catch (e) {
+        showLogin();
+      }
     };
 
     function showLogin() {
       document.getElementById("loginCard").style.display = "flex";
       document.getElementById("signupCard").style.display = "none";
+      document.getElementById("chatbox").style.display = "none";
+      document.getElementById("inputArea").style.display = "none";
+      document.getElementById("topRightButton").style.display = "none";
     }
 
     function showSignup() {
@@ -185,13 +190,14 @@
 
       const res = await fetch("/login", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
       });
 
       const data = await res.json();
 
       if (data.success) {
+        sessionStorage.setItem("chat_messages", JSON.stringify([])); // 로그인 시 대화 초기화
         initChatUI();
       } else if (data.message.includes("등록되지")) {
         document.getElementById("signupEmail").value = email;
@@ -208,7 +214,7 @@
 
       const res = await fetch("/signup", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, nickname })
       });
 
@@ -228,6 +234,18 @@
       document.getElementById("chatbox").style.display = "block";
       document.getElementById("inputArea").style.display = "flex";
       document.getElementById("topRightButton").style.display = "block";
+
+      const savedMessages = loadMessagesFromSession();
+      const chatbox = document.getElementById("chatbox");
+      chatbox.innerHTML = "";
+      savedMessages.forEach(msg => {
+        if (msg.role === "user") {
+          chatbox.innerHTML += `<div class="message user"><div class="bubble">${msg.content}</div></div>`;
+        } else if (msg.role === "assistant") {
+          chatbox.innerHTML += `<div class="message bot"><div class="bubble">${msg.content}</div></div>`;
+        }
+      });
+      chatbox.scrollTop = chatbox.scrollHeight;
     }
 
     async function sendMessage() {
@@ -243,7 +261,7 @@
       try {
         const res = await fetch("/chat", {
           method: "POST",
-          headers: {"Content-Type": "application/json"},
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: userMessage })
         });
 
@@ -254,6 +272,13 @@
           chatbox.innerHTML += `<div class="message bot"><div class="bubble">🎵 ${data.song.content}</div></div>`;
         }
         chatbox.scrollTop = chatbox.scrollHeight;
+
+        // 저장
+        const currentMessages = loadMessagesFromSession();
+        currentMessages.push({ role: "user", content: userMessage });
+        currentMessages.push({ role: "assistant", content: data.reply });
+        saveMessagesToSession(currentMessages);
+
       } catch (e) {
         chatbox.innerHTML += `<div class="message bot"><div class="bubble">서버 오류: ${e}</div></div>`;
       }
@@ -265,6 +290,20 @@
 
     function goToVisualization() {
       window.location.href = "/visualization";
+    }
+
+    async function logout() {
+      try {
+        const res = await fetch("/logout", { method: "POST" });
+        const data = await res.json();
+        if (data.success) {
+          sessionStorage.clear();  // 대화 기록 삭제
+          alert("로그아웃 되었습니다.");
+          location.reload();
+        }
+      } catch (e) {
+        alert("로그아웃 실패: " + e);
+      }
     }
   </script>
 </body>
