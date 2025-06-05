@@ -68,8 +68,8 @@
 
 ### 🧪 로컬 실행 방법
 
-#### 1. 프로젝트 클론 및 가상환경 설정
 ```bash
+프로젝트 클론 및 가상환경 설정, 챗봇 실행
 git clone https://github.com/cosmosweet/emotion_music_chatbot.git
 python -m venv env
 source env/bin/activate   # Windows는 .\env\Scripts\activate
@@ -77,16 +77,16 @@ pip install --upgrade pip
 pip install pyngrok
 pip install -r requirements.txt
 
-#### 2. .env 환경 변수 설정
+2. .env 환경 변수 설정
 
 .env 파일을 프로젝트 루트 디렉토리에 생성하고 다음 항목을 입력하세요:
 OPENAI_API_KEY: OpenAI GPT-4o API Key (직접 발급 받아야합니다)
 
-#### 3. ngrok 연결
+3. ngrok 연결
 ngrok 설치 후,
 ngrok config add-authtoken [본인의 토큰]
 를 통해 계졍을 연동해주세요
 
-#### 4. Flask 서버 실행
+4. Flask 서버 실행
 python main.py
 127.0.0.1:5001 접속 (끝)
