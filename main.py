@@ -99,9 +99,15 @@ def chat():
 
         now = datetime.now()
         last_time = user_last_recommend_time.get(user_id)
-        cooldown_passed = not last_time or (now - last_time >= timedelta(minutes=10))
-        recommend = False
 
+        print(f"[쿨다운 체크] user: {user_id}")
+        print(f"마지막 추천 시각: {last_time}")
+        print(f"현재 시각: {now}")
+
+        cooldown_passed = not last_time or (now - last_time >= timedelta(minutes=10))
+        print(f"쿨다운 통과 여부: {cooldown_passed}")
+
+        recommend = False
         if user_emotion_counter.get(user_id, {}).get(emotion, 0) >= 2 and cooldown_passed:
             recommend = True
             user_last_recommend_time[user_id] = now
@@ -109,7 +115,7 @@ def chat():
 
         messages = get_user_messages(user_id)
         if not messages:
-            messages = [{"role": "system", "content": "You are a helpful assistant."}]
+            messages = init_chat_context()
         messages.append({"role": "user", "content": user_input})
 
         reply = get_chat_reply(client, messages, user_input)
